@@ -21,13 +21,7 @@ const heightToScale = (height) => {
 };
 
 const stateDefaults = {
-  p: 0.3,
-  n: 7,
-  totalCoins: 0,
-  flipTry: -1,
-  play: false,
-  goalFlips: 0,
-  speed: 1,
+  timeScale: 1,
 };
 
 let state = { ...stateDefaults };
@@ -70,8 +64,7 @@ const resetState = () => {
 
   // Setting canvas size properly
   onResize();
-
-  // drawWorld();
+  drawWorld();
 };
 
 const onResize = () => {
@@ -94,9 +87,10 @@ const onResize = () => {
 
   // const ctxScale = Math.min(w, h) / minDim;
   const ctx = el.getContext("2d");
+  // console.log("set ctx", ctx);
   ctx.scale(w / state.w, h / state.h);
   state.ctx = ctx;
-  // drawWorld();
+  drawWorld();
 };
 
 // const flipCoinIsHeads = (p) => {
@@ -173,7 +167,22 @@ const onResize = () => {
 //   );
 // };
 
-// const drawWorld = () => {
+const drawWorld = () => {
+  const { ctx, time, w, h } = state;
+  ctx.clearRect(0, 0, w, h);
+
+  const drawScales = [-6, -3, 0, 3, 6];
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = `rgba(0, 0, 0, 0.3)`;
+
+  drawScales.forEach((s, i) => {
+    const div = 10 ** s;
+    const angle = 2 * Math.PI * (time / div - Math.floor(time / div));
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2, 180 + 5 * i, 0, angle);
+    ctx.stroke();
+  });
+};
 //   const { ctx, w, h, flips, n, p, numTrialsByHeads } = state;
 //   ctx.clearRect(0, 0, w, h);
 //   ctx.textBaseline = "middle";
@@ -341,8 +350,10 @@ const onScroll = () => {
   // const scrollDiv = document.getElementById("scrollContainer");
   const cursorDiv = document.getElementById("cursorText");
   const scale = heightToScale(window.scrollY + window.innerHeight / 2);
+  state.timeScale = scale;
 
   cursorDiv.innerHTML = `${formatScale(scale)}x`;
+  drawWorld();
 };
 
 // const BG_COLOR = "#ffffff";
@@ -385,10 +396,11 @@ const init = () => {
   });
 
   window.scrollTo(0, scaleToHeight(1) - window.innerHeight / 2);
-  onScroll();
 
   // init state
+  onResize();
   resetState();
+  drawWorld();
 
   // // create events
   // const coinFlipButton = document.getElementById("flipCoin");
@@ -405,29 +417,27 @@ const init = () => {
   // nInput.addEventListener("change", () => resetState());
   // speedInput.addEventListener("click", setSpeed);
 
-  // let lastTime = new Date().getTime();
-  // const timeUpdate = (dt) => {
-  //   if (state.play === false) {
-  //     return;
-  //   }
+  let lastTime = performance.now();
+  const timeUpdate = (dt) => {
+    if (state.play === false) {
+      return;
+    }
 
-  //   state.goalFlips += (((dt - lastTime) * state.speed) / 1000) * state.n;
-  //   while (state.totalCoins < state.goalFlips) {
-  //     flipOneCoin();
-  //   }
-  //   drawWorld();
-  // };
+    state.time = (state.time ?? 0) + 1e-3 * ((dt - lastTime) * state.timeScale);
 
-  // const loop = () => {
-  //   requestAnimationFrame((dt) => {
-  //     timeUpdate(dt);
-  //     lastTime = dt;
-  //     loop();
-  //   });
-  // };
+    // todo dirty flag
+    drawWorld();
+  };
 
-  // drawWorld();
-  // loop();
+  const loop = () => {
+    requestAnimationFrame((dt) => {
+      timeUpdate(dt);
+      lastTime = dt;
+      loop();
+    });
+  };
+
+  loop();
 };
 
 // global events
