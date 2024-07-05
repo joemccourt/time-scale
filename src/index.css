@@ -32,10 +32,10 @@ body {
   background-color: black;
   position: absolute;
 }
-
+/* 
 #scrollContainer {
-  background-color: aquamarine;
-}
+  background-color: rgb(127, 255, 212);
+} */
 
 #marksContainer {
   position: relative;
@@ -52,7 +52,7 @@ body {
 
 #marksContainer div.name {
   font-size: 64px;
-  width: 30%;
+  width: 40%;
 }
 
 #marksContainer div.symbol {
@@ -63,11 +63,11 @@ body {
 
 #marksContainer div.desc {
   font-size: 32px;
-  width: 35%;
+  width: 30%;
   text-align: right;
 }
 
 #marksContainer div.val {
   font-size: 32px;
-  width: 25%;
+  width: 20%;
 }

@@ -11,6 +11,15 @@ const formatScale = (scale) => {
 
 const MAG_TO_PX = 150;
 
+// log time scale is mapped linearly to window height
+const scaleToHeight = (timeScale) => {
+  return MAG_TO_PX * (Math.log10(timeScale) - minLog);
+};
+
+const heightToScale = (height) => {
+  return Math.pow(10, height / MAG_TO_PX + minLog);
+};
+
 const stateDefaults = {
   p: 0.3,
   n: 7,
@@ -22,6 +31,20 @@ const stateDefaults = {
 };
 
 let state = { ...stateDefaults };
+
+const genColorGrad = () => {
+  const marksWithColor = marks.filter((m) => m.color);
+  const colorsAndStops = marksWithColor
+    .map((m) => {
+      const fraction = (Math.log10(m.scale) - minLog) / (maxLog - minLog);
+      const { r, g, b } = m.color;
+      const color = `rgba(${r}, ${g}, ${b}, 0.7)`;
+      return `${color} ${100 * fraction}%`;
+    })
+    .join(", ");
+
+  return `linear-gradient(to bottom, ${colorsAndStops})`;
+};
 
 const resetState = () => {
   state = { ...stateDefaults };
@@ -314,15 +337,6 @@ const onResize = () => {
 //   state.speed = parseInt(e.target.value, 10);
 // };
 
-const scaleToHeight = (timeScale) => {
-  // console.log("scale", timeScale, Math.log(timeScale) - minLog);
-  return MAG_TO_PX * (Math.log10(timeScale) - minLog);
-};
-
-const heightToScale = (height) => {
-  return Math.pow(10, height / MAG_TO_PX + minLog);
-};
-
 const onScroll = () => {
   // const scrollDiv = document.getElementById("scrollContainer");
   const cursorDiv = document.getElementById("cursorText");
@@ -331,9 +345,9 @@ const onScroll = () => {
   cursorDiv.innerHTML = `${formatScale(scale)}x`;
 };
 
-const BG_COLOR = "#ffffff";
+// const BG_COLOR = "#ffffff";
 const init = () => {
-  document.body.style.background = BG_COLOR;
+  document.body.style.background = genColorGrad();
 
   const scrollDiv = document.getElementById("scrollContainer");
   document.addEventListener("scroll", onScroll);
@@ -349,7 +363,7 @@ const init = () => {
 
     const markVal = document.createElement("div");
     markVal.classList.add("val");
-    markVal.innerHTML = formatScale(m.scale);
+    markVal.innerHTML = `${formatScale(m.scale)}s`;
     markDiv.appendChild(markVal);
 
     const markName = document.createElement("div");
