@@ -1,0 +1,28 @@
+{
+  "name": "time-scale",
+  "version": "1.0.0",
+  "description": "Interactive viz of different time scales",
+  "main": "index.html",
+  "scripts": {
+    "lint": "npx eslint",
+    "format": "npx prettier . --check",
+    "test": "jest"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.[t|j]sx?$": "babel-jest"
+    }
+  },
+  "author": "Joe McCourt",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/preset-env": "^7.24.7",
+    "@eslint/js": "^9.5.0",
+    "babel-jest": "^29.7.0",
+    "eslint": "^9.5.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^15.6.0",
+    "jest": "^29.7.0",
+    "prettier": "3.3.2"
+  }
+}

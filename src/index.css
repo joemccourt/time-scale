@@ -1,0 +1,73 @@
+body {
+  margin: 0;
+}
+
+.canvasContainer {
+  display: flex;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+#cursorContainer {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+#cursorText {
+  background-color: rgba(176, 199, 255, 0.81);
+  border-radius: 6px;
+  padding: 12px;
+  color: black;
+  font-size: 72px;
+}
+
+#cursorLine {
+  height: 1px;
+  width: 100%;
+  background-color: black;
+  position: absolute;
+}
+
+#scrollContainer {
+  background-color: aquamarine;
+}
+
+#marksContainer {
+  position: relative;
+  width: 100%;
+}
+
+#marksContainer > div {
+  position: absolute;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#marksContainer div.name {
+  font-size: 64px;
+  width: 30%;
+}
+
+#marksContainer div.symbol {
+  font-size: 32px;
+  font-style: italic;
+  width: 10%;
+}
+
+#marksContainer div.desc {
+  font-size: 32px;
+  width: 35%;
+  text-align: right;
+}
+
+#marksContainer div.val {
+  font-size: 32px;
+  width: 25%;
+}
