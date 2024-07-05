@@ -25,9 +25,14 @@ const heightToScale = (height) => {
   return Math.pow(10, height / MAG_TO_PX + minLog);
 };
 
+// const heightToLogScale = (height) => {
+//   return height / MAG_TO_PX + minLog;
+// };
+
 const stateDefaults = {
   timeScale: 1,
   timesByScale: {},
+  time: 0n, //BigInt(10n ** -BigInt(minLog))
 };
 
 let state = { ...stateDefaults };
@@ -134,7 +139,12 @@ const drawWorld = () => {
     const x = w / 2;
     const y = h / 2;
     const r = 0 + ringWidth * i;
-    const angle = -2 * Math.PI * (time / div - Math.floor(time / div));
+
+    // console.log(BigInt(10n ** (s + minLog)));
+    const timeFloat =
+      1e-6 * Number((10n ** 6n * time) / BigInt(10n ** BigInt(s - minLog)));
+
+    const angle = -2 * Math.PI * (timeFloat - Math.floor(timeFloat));
     if (tooFast) {
       const steps = 2;
       const rOffset = Math.random() * Math.PI * 2;
@@ -231,8 +241,16 @@ const init = () => {
       return;
     }
 
-    state.time = (state.time ?? 0) + 1e-3 * ((dt - lastTime) * state.timeScale);
+    // todo need to keep timescale in big int somehow
+    const timeScale = Math.round(
+      10 **
+        (-3 - minLog + 1e-9 * Math.round(1e9 * Math.log10(state.timeScale))),
+    );
 
+    state.time =
+      state.time + BigInt(Math.round(dt - lastTime)) * BigInt(timeScale);
+
+    // console.log(state.time, dt);
     // todo dirty flag
     drawWorld();
   };
