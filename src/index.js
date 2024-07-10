@@ -14,7 +14,13 @@ const formatScale = (scale) => {
   }).format(scale);
 };
 
-const MAG_TO_PX = 150;
+const formatScaleFactor = (scale) => {
+  return new Intl.NumberFormat("en-US", {
+    maximumSignificantDigits: 3,
+  }).format(scale);
+};
+
+const MAG_TO_PX = 350;
 
 // log time scale is mapped linearly to window height
 const scaleToHeight = (timeScale) => {
@@ -141,8 +147,13 @@ const drawWorld = () => {
     const r = 0 + ringWidth * i;
 
     // console.log(BigInt(10n ** (s + minLog)));
-    const timeFloat =
-      1e-6 * Number((10n ** 6n * time) / BigInt(10n ** BigInt(s - minLog)));
+    const scaleBig = BigInt(10n ** BigInt(s - minLog));
+    const timeModScale = time % scaleBig;
+
+    const timeFloat = Number(timeModScale) / Number(scaleBig);
+
+    // const timeFloat =
+    //   1e-6 * Number((10n ** 6n * time) / BigInt(10n ** BigInt(s - minLog)));
 
     const angle = -2 * Math.PI * (timeFloat - Math.floor(timeFloat));
     if (tooFast) {
@@ -169,7 +180,7 @@ const onScroll = () => {
   const scale = heightToScale(window.scrollY + window.innerHeight / 2);
   state.timeScale = scale;
 
-  cursorDiv.innerHTML = `${formatScale(scale)}x`;
+  cursorDiv.innerHTML = `${formatScaleFactor(scale)} s/s`;
   cursorDiv.style.backgroundColor = colorToString(getScaleColor(scale), 0.7);
   drawWorld();
 };
@@ -237,10 +248,6 @@ const init = () => {
 
   let lastTime = performance.now();
   const timeUpdate = (dt) => {
-    if (state.play === false) {
-      return;
-    }
-
     // todo need to keep timescale in big int somehow
     const timeScale = Math.round(
       10 **
@@ -250,6 +257,32 @@ const init = () => {
     state.time =
       state.time + BigInt(Math.round(dt - lastTime)) * BigInt(timeScale);
 
+    const clockDiv = document.getElementById("clock");
+
+    const clockText = marks
+      .filter((m) => m.symbol)
+      .map((m, i, arr) => {
+        const thisScale = m.scale;
+        const higherScale = arr[i + 1]?.scale ?? thisScale * 1000;
+        const scaleRatio = higherScale / thisScale;
+
+        const numDigits = Math.ceil(Math.log10(scaleRatio));
+
+        // error here for non base 10 scales
+        const scaleBig = BigInt(
+          10n ** BigInt(Math.round(Math.log10(higherScale) - minLog)),
+        );
+
+        const timeModScale = state.time % scaleBig;
+        const timeFloat = Number(timeModScale) / Number(scaleBig);
+        const timeFloor = Math.floor(scaleRatio * timeFloat);
+        // console.log(scaleBig, timeModScale, timeFloat, timeFloor);
+        return `${timeFloor.toFixed(0).padStart(numDigits, "0")}${m.symbol}`;
+      })
+      .join(" ");
+
+    clockDiv.innerHTML = String(clockText);
+
     // console.log(state.time, dt);
     // todo dirty flag
     drawWorld();
@@ -257,6 +290,7 @@ const init = () => {
 
   const loop = () => {
     requestAnimationFrame((dt) => {
+      // console.log(dt);
       timeUpdate(dt);
       lastTime = dt;
       loop();
