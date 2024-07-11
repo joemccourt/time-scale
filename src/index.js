@@ -2,6 +2,37 @@
 
 import { minLog, maxLog, marks } from "../lib/time-marks.js";
 
+// t in minLog unit
+// dt in ms
+const addTime = (t, dt) => {
+  const timeScale = Math.round(
+    10 ** (-3 - minLog + 1e-9 * Math.round(1e9 * Math.log10(state.timeScale))),
+  );
+
+  return t + BigInt(Math.round(dt)) * BigInt(timeScale);
+};
+
+// return [0, 1) of t modulo timeScale
+const timeFracScale = (t, timeScale) => {
+  const scaleLogFloor = Math.floor(Math.log10(timeScale));
+  const scaleBig = BigInt(10n ** BigInt(scaleLogFloor - minLog));
+
+  // for fractional log time scales
+  const scaleLogRemainder = Math.log10(timeScale) - scaleLogFloor; // [0, 1)
+  const scaleMultiplier = 10 ** scaleLogRemainder; // [1, 10)
+
+  // increase value for conversion into BigInt
+  // precision up to 9 digits of remaining scale
+  const bigScaleMultiplier = BigInt(Math.floor(scaleMultiplier * 1e9)); // [0, 1e9)
+
+  // int multiplication and then division to get back to correct scale
+  const finalScale = (scaleBig * bigScaleMultiplier) / BigInt(1e9);
+
+  // mod by the time scale in the correct space and then divide to get fraction
+  const timeModScale = t % finalScale;
+  return Number(timeModScale) / Number(finalScale);
+};
+
 const colorToString = (c, a = 1) => {
   const { r, g, b } = c;
   return `rgba(${r}, ${g}, ${b}, ${a})`;
@@ -38,7 +69,7 @@ const heightToScale = (height) => {
 const stateDefaults = {
   timeScale: 1,
   timesByScale: {},
-  time: 0n, //BigInt(10n ** -BigInt(minLog))
+  time: 0n, // relative to 10n ** -BigInt(minLog)
 };
 
 let state = { ...stateDefaults };
@@ -147,13 +178,7 @@ const drawWorld = () => {
     const r = 0 + ringWidth * i;
 
     // console.log(BigInt(10n ** (s + minLog)));
-    const scaleBig = BigInt(10n ** BigInt(s - minLog));
-    const timeModScale = time % scaleBig;
-
-    const timeFloat = Number(timeModScale) / Number(scaleBig);
-
-    // const timeFloat =
-    //   1e-6 * Number((10n ** 6n * time) / BigInt(10n ** BigInt(s - minLog)));
+    const timeFloat = timeFracScale(time, div);
 
     const angle = -2 * Math.PI * (timeFloat - Math.floor(timeFloat));
     if (tooFast) {
@@ -248,14 +273,7 @@ const init = () => {
 
   let lastTime = performance.now();
   const timeUpdate = (dt) => {
-    // todo need to keep timescale in big int somehow
-    const timeScale = Math.round(
-      10 **
-        (-3 - minLog + 1e-9 * Math.round(1e9 * Math.log10(state.timeScale))),
-    );
-
-    state.time =
-      state.time + BigInt(Math.round(dt - lastTime)) * BigInt(timeScale);
+    state.time = addTime(state.time, dt - lastTime);
 
     const clockDiv = document.getElementById("clock");
 
@@ -268,17 +286,12 @@ const init = () => {
 
         const numDigits = Math.ceil(Math.log10(scaleRatio));
 
-        // error here for non base 10 scales
-        const scaleBig = BigInt(
-          10n ** BigInt(Math.round(Math.log10(higherScale) - minLog)),
-        );
-
-        const timeModScale = state.time % scaleBig;
-        const timeFloat = Number(timeModScale) / Number(scaleBig);
+        const timeFloat = timeFracScale(state.time, higherScale);
         const timeFloor = Math.floor(scaleRatio * timeFloat);
-        // console.log(scaleBig, timeModScale, timeFloat, timeFloor);
+
         return `${timeFloor.toFixed(0).padStart(numDigits, "0")}${m.symbol}`;
       })
+      .toReversed()
       .join(" ");
 
     clockDiv.innerHTML = String(clockText);
