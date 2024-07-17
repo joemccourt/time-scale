@@ -2,11 +2,48 @@
 
 import { minLog, maxLog, marks } from "../lib/time-marks.js";
 
+const markUnits = marks.filter((m) => m.symbol);
+
+const MAG_TO_PX = 500;
+
+const timeInUnitValue = (m, mHigher, t) => {
+  const thisScale = m.scale;
+  const higherScale = mHigher?.scale ?? 10 ** maxLog;
+  const timeFloat = timeFracScale(t, higherScale);
+  const scaleRatio = higherScale / thisScale;
+  return scaleRatio * timeFloat;
+};
+
+const timeInUnit = (m, mHigher, t) => {
+  const thisScale = m.scale;
+  const higherScale = mHigher?.scale ?? 10 ** maxLog;
+  const scaleRatio = higherScale / thisScale;
+
+  const numDigits = Math.ceil(Math.log10(scaleRatio));
+  const timeFloat = timeInUnitValue(m, mHigher, t);
+  const timeFloor = Math.floor(timeFloat);
+
+  return `${timeFloor.toFixed(0).padStart(numDigits, "0")}${m.symbol}`;
+};
+
+const formatAsLargestUnit = (t) => {
+  return markUnits
+    .map((m, i, arr) => {
+      const val = timeInUnitValue(m, arr[i + 1], t);
+      if (val < 1) {
+        return "";
+      }
+      return `${val.toPrecision(3)} ${m.name}`;
+    })
+    .filter((s) => Boolean(s))
+    .at(-1);
+};
+
 // t in minLog unit
 // dt in ms
-const addTime = (t, dt) => {
+const addTime = (t, dt, scale) => {
   const timeScale = Math.round(
-    10 ** (-3 - minLog + 1e-9 * Math.round(1e9 * Math.log10(state.timeScale))),
+    10 ** (-3 - minLog + 1e-9 * Math.round(1e9 * Math.log10(scale))),
   );
 
   return t + BigInt(Math.round(dt)) * BigInt(timeScale);
@@ -45,13 +82,11 @@ const formatScale = (scale) => {
   }).format(scale);
 };
 
-const formatScaleFactor = (scale) => {
-  return new Intl.NumberFormat("en-US", {
-    maximumSignificantDigits: 3,
-  }).format(scale);
-};
-
-const MAG_TO_PX = 350;
+// const formatScaleFactor = (scale) => {
+//   return new Intl.NumberFormat("en-US", {
+//     maximumSignificantDigits: 3,
+//   }).format(scale);
+// };
 
 // log time scale is mapped linearly to window height
 const scaleToHeight = (timeScale) => {
@@ -205,7 +240,7 @@ const onScroll = () => {
   const scale = heightToScale(window.scrollY + window.innerHeight / 2);
   state.timeScale = scale;
 
-  cursorDiv.innerHTML = `${formatScaleFactor(scale)} s/s`;
+  cursorDiv.innerHTML = `${formatAsLargestUnit(addTime(BigInt(0), 1000, scale))}/s`; //`${formatScaleFactor(scale)} s/s`;
   cursorDiv.style.backgroundColor = colorToString(getScaleColor(scale), 0.7);
   drawWorld();
 };
@@ -273,23 +308,13 @@ const init = () => {
 
   let lastTime = performance.now();
   const timeUpdate = (dt) => {
-    state.time = addTime(state.time, dt - lastTime);
+    state.time = addTime(state.time, dt - lastTime, state.timeScale);
 
     const clockDiv = document.getElementById("clock");
 
-    const clockText = marks
-      .filter((m) => m.symbol)
+    const clockText = markUnits
       .map((m, i, arr) => {
-        const thisScale = m.scale;
-        const higherScale = arr[i + 1]?.scale ?? thisScale * 1000;
-        const scaleRatio = higherScale / thisScale;
-
-        const numDigits = Math.ceil(Math.log10(scaleRatio));
-
-        const timeFloat = timeFracScale(state.time, higherScale);
-        const timeFloor = Math.floor(scaleRatio * timeFloat);
-
-        return `${timeFloor.toFixed(0).padStart(numDigits, "0")}${m.symbol}`;
+        return timeInUnit(m, arr[i + 1], state.time);
       })
       .toReversed()
       .join(" ");
